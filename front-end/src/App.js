@@ -19,6 +19,12 @@ class App extends Component {
       legs_dict: {},
       stops: null,
 
+      bonus_driver_location: null,
+      bonus_driver_x_new: '',
+      bonus_driver_y_new: '',
+      path_to_complete: null,
+
+
       alert_info: {status: false,
                    type: "warning",
                    reason: "",
@@ -34,11 +40,16 @@ class App extends Component {
     this.pointOverlapDict = {}
     this.iCheckFormatLabel = 0
     this.renderDropdownButton = this.renderDropdownButton.bind(this)
-    this._onPostDriverButtonPressed = this._onPostDriverButtonPressed.bind(this)
+    this._onPutDriverButtonPressed = this._onPutDriverButtonPressed.bind(this)
     this.resetErrorMessage = this.resetErrorMessage.bind(this)
     this.setInputNumberErrorMessage = this.setInputNumberErrorMessage.bind(this)
     this._onLegDropdownButtonPressed = this._onLegDropdownButtonPressed.bind(this)
     this.computePath = this.computePath.bind(this)
+    this._onBonusDriverCoordinatesChanged = this._onBonusDriverCoordinatesChanged.bind(this)
+    this.setInputNumberErrorMessage = this.setInputNumberErrorMessage.bind(this)
+    this._onPutBonusDriverButtonPressed = this._onPutBonusDriverButtonPressed.bind(this)
+    this._onGetBonusDriverButtonPressed = this._onGetBonusDriverButtonPressed.bind(this)
+    this.computeBonusRemainingPath = this.computeBonusRemainingPath.bind(this)
   }
 
 
@@ -58,11 +69,11 @@ class App extends Component {
   }
 
 
-  setInputNumberErrorMessage(){
+  setInputNumberErrorMessage(err_reason, err_msg){
     this.setState({alert_info: {status: true,
       type: "warning",
-      reason: "inputNum",
-      message: "Leg progress is an integer in [0, 100]"}})
+      reason: err_reason,
+      message: err_msg}})
   }
 
 
@@ -74,8 +85,7 @@ class App extends Component {
   }
 
 
-  postData(url = ``, data = {}) {
-    console.log(JSON.stringify(data))
+  putData(url = ``, data = {}) {
     return fetch(url, {
         method: "PUT",
         headers: {
@@ -115,6 +125,32 @@ class App extends Component {
   }
 
 
+  checkNumInput(txt, min, max, err_reason, err_msg){
+    var val
+    // Handle input with errors
+    if (txt === ''){
+      val = ''
+    }
+    else if (Number.isNaN(parseInt(txt))){
+      val = ''
+      this.setInputNumberErrorMessage(err_reason, err_msg)
+    } else if (parseInt(txt).toString() !== txt){
+      val = parseInt(txt)
+      this.setInputNumberErrorMessage(err_reason, err_msg)
+    } else if (parseInt(txt) < min){
+      val = min
+      this.setInputNumberErrorMessage(err_reason, err_msg)
+    } else if (parseInt(txt) > max){
+      val = max
+      this.setInputNumberErrorMessage(err_reason, err_msg)
+    } else {
+      val = parseInt(txt)
+    }
+
+    return val
+  }
+
+
   _onGetLegsButtonPressed(){
     this.resetErrorMessage()
 
@@ -129,7 +165,7 @@ class App extends Component {
     .catch(error => {
       this.setState({alert_info: {status: true,
         type: "danger",
-        reason: "newLegID",
+        reason: "GetLegs",
         message: error["message"]}})
       console.error(error)
     })
@@ -146,11 +182,13 @@ class App extends Component {
 
       // Update driver's location
       if (this.state.driver_location !== null) this.computePath()
+      // Update bonus driver's remaining path
+      if (this.state.bonus_driver_location !== null) this.computeBonusRemainingPath()
     }) 
     .catch(error => {
       this.setState({alert_info: {status: true,
         type: "danger",
-        reason: "newLegID",
+        reason: "GetStops",
         message: error["message"]}})
       console.error(error)
     })
@@ -171,44 +209,28 @@ class App extends Component {
     .catch(error => {
       this.setState({alert_info: {status: true,
         type: "danger",
-        reason: "newLegID",
+        reason: "GetDriverLoc",
         message: error["message"]}})
       console.error(error)
     })
   }
 
 
-  _onNewProgressValueChanged(newVal){
-    var legProgress_new
-    var txt = newVal.target.value
+  _onNewProgressValueChanged(newVal){    
     this.resetErrorMessage()
-    
-    // Handle input with errors
-    if (txt === ''){
-      legProgress_new = ''
-    }
-    else if (Number.isNaN(parseInt(txt))){
-      legProgress_new = ''
-      this.setInputNumberErrorMessage()
-    } else if (parseInt(txt).toString() !== txt){
-      legProgress_new = parseInt(txt)
-      this.setInputNumberErrorMessage()
-    } else if (parseInt(newVal.target.value) < 0){
-      legProgress_new = 0
-      this.setInputNumberErrorMessage()
-    } else if (parseInt(newVal.target.value) > 100){
-      legProgress_new = 100
-      this.setInputNumberErrorMessage()
-    } else {
-      legProgress_new = parseInt(txt)
-    }
+
+    var txt = newVal.target.value
+    var err_reason = "inputNumLeg"
+    var err_msg = "Leg progress is an integer in [0, 100]"
+
+    var legProgress_new = this.checkNumInput(txt, 0, 100, err_reason, err_msg)
 
     // Set the proper value to new leg progress
     this.setState({driver_loc_legProgress_new: legProgress_new})
   }
 
 
-  _onPostDriverButtonPressed(){
+  _onPutDriverButtonPressed(){
     this.resetErrorMessage()
 
     if (this.state.driver_loc_legProgress_new !== '' && this.state.driver_loc_activeLegID_new !== null){
@@ -218,7 +240,7 @@ class App extends Component {
           "legProgress": this.state.driver_loc_legProgress_new
         }
       }
-      this.postData(this.backEndUrl + "driver", new_driver_location)
+      this.putData(this.backEndUrl + "driver", new_driver_location)
       .then(data => data.json())
       .then(data => {
         this.setState({driver_location: data["Driver’s current position"]})
@@ -229,14 +251,14 @@ class App extends Component {
       .catch(error => {
         this.setState({alert_info: {status: true,
           type: "danger",
-          reason: "newLegID",
+          reason: "OytDriverLoc",
           message: error["message"]}})
         console.error(error)
       })
     } else {
       this.setState({alert_info: {status: true,
                                   type: "warning",
-                                  reason: "postLoc",
+                                  reason: "putLoc",
                                   message: "New leg progress and ID should be specified first"}})
     }
   }
@@ -251,7 +273,6 @@ class App extends Component {
         message: "There is no leg ID data available, get leg IDs from the server first"}})
     }
   }
-
 
 
   formatFigureLabel(labelData){
@@ -346,6 +367,115 @@ class App extends Component {
   //   }
   // }
 
+
+
+  _onBonusDriverCoordinatesChanged(newVal, axis="y"){
+    this.resetErrorMessage()
+
+    var txt = newVal.target.value
+    var err_reason = "inputNumBonusDriver"
+    var err_msg = "x and y are integers in [0, 200]"
+
+    var val = this.checkNumInput(txt, 0, 200, err_reason, err_msg)
+
+    // Set the proper values to corresponding coordinates
+    if (axis === "x"){
+      this.setState({bonus_driver_x_new: val})
+    } else {
+      this.setState({bonus_driver_y_new: val})
+    }
+    
+
+  }
+
+
+  _onPutBonusDriverButtonPressed(){
+    this.resetErrorMessage()
+
+    if (this.state.bonus_driver_x_new !== '' && this.state.bonus_driver_y_new !== ''){
+      var new_bonus_driver_location = {"Driver’s current position":
+        {
+          "x": parseInt(this.state.bonus_driver_x_new),
+          "y": parseInt(this.state.bonus_driver_y_new)
+        }
+      }
+      this.putData(this.backEndUrl + "bonusdriver", new_bonus_driver_location)
+      .then(data => data.json())
+      .then(data => {
+        this.setState({bonus_driver_location: data["Driver’s current position"]})
+
+      // Update remaining path
+      if (this.state.stops !== null) this.computeBonusRemainingPath()
+      }) 
+      .catch(error => {
+        this.setState({alert_info: {status: true,
+          type: "danger",
+          reason: "PutBonusDriverLoc",
+          message: error["message"]}})
+        console.error(error)
+      })
+    } else {
+      this.setState({alert_info: {status: true,
+                                  type: "warning",
+                                  reason: "putLoc",
+                                  message: "New bonus driver's location should be specified first"}})
+    }
+  }
+
+
+  _onGetBonusDriverButtonPressed(){
+    this.resetErrorMessage()
+
+    this.getData(this.backEndUrl + "bonusdriver")
+    .then(data => data.json())
+    .then(data => {
+      this.setState({bonus_driver_location: data["Driver’s current position"]})
+      // Update remaining path
+      if (this.state.stops !== null) this.computeBonusRemainingPath()
+    }) 
+    .catch(error => {
+      this.setState({alert_info: {status: true,
+        type: "danger",
+        reason: "GetBonusDriverLoc",
+        message: error["message"]}})
+      console.error(error)
+    })
+  }
+
+
+  computeBonusRemainingPath(){
+    var path_to_complete = []
+    var x = this.state.bonus_driver_location["x"]
+    var y = this.state.bonus_driver_location["y"]
+    
+    var min_i = 0
+    var min = Infinity
+    for (var i = 0; i < this.state.stops.length; i++ ){
+      var dist = Math.sqrt(Math.pow(this.state.stops[i]["x"] - x, 2) + Math.pow(this.state.stops[i]["y"] - y, 2))
+      console.log(this.state.stops[i] + " " + dist)
+      if (dist < min){
+        min = dist
+        min_i = i
+      }
+    }
+
+    path_to_complete.push({
+      "name": "loc",
+      "x": x,
+      "y": y,
+    })
+
+    for (var i = min_i; i < this.state.stops.length; i++ ){
+      path_to_complete.push({
+        "name": this.state.stops[i]["name"],
+        "x": this.state.stops[i]["x"],
+        "y": this.state.stops[i]["y"],
+      })
+    }
+
+    this.setState({path_to_complete: path_to_complete})
+  }
+
   
 
   render() {
@@ -383,9 +513,7 @@ class App extends Component {
 
 
         <Form componentClass="fieldset" inline>
-        
           <FormGroup>
-
             <ControlLabel bsStyle="default" style={{marginRight: 10}}>New Driver's Location</ControlLabel>
 
             <InputGroup>
@@ -408,10 +536,9 @@ class App extends Component {
             </InputGroup>
           </FormGroup>
 
-          <Button style={{marginLeft: 10}} onClick={() => this._onPostDriverButtonPressed()}>
-            Post location
+          <Button style={{marginLeft: 10}} onClick={() => this._onPutDriverButtonPressed()}>
+            Put location
           </Button>
-
         </Form>
 
 
@@ -429,13 +556,48 @@ class App extends Component {
             <Scatter name='stops' data={this.state.stops} fill='#8884d8' shape="cross" fillOpacity={0.7}>
               <LabelList dataKey="name" position="top" content={(labelData) => this.formatFigureLabel(labelData)}/>
             </Scatter>
-            <Line name="Driver's path" dataKey="y" data={this.state.driver_path} fillOpacity={0.7} dot={false}/>
-            <Scatter name='Driver location' data={this.state.driver_path.length ===0 ? null : [this.state.driver_path[this.state.driver_path.length-1]]} fill='#FF4500' shape="star" fillOpacity={0.95}/>
+            <Line name="path" dataKey="y" data={this.state.driver_path} fillOpacity={0.7} dot={false}/>
+            <Scatter name='driver' data={this.state.driver_path.length === 0 ? null : [this.state.driver_path[this.state.driver_path.length-1]]} fill='#FF4500' shape="star" fillOpacity={0.95}/>
+            <Scatter name='bonus driver' data={this.state.bonus_driver_location == null ? null : [this.state.bonus_driver_location]} fill='#FF00FF' shape="diamond" fillOpacity={0.85}/>
+            <Line name="path" dataKey="y" data={this.state.path_to_complete} fillOpacity={0.7} dot={false} strokeDasharray="5 5" stroke="#FF00FF"/>
             {/* <Tooltip cursor={{strokeDasharray: '3 3'}} content={(data) => this.renderTooltip(data)}/> */}
             {/* <Tooltip content={({payload}) => (<div>{JSON.stringify(payload[0])}</div>)} /> */}
             <Legend align="center" iconSize={7}/>
           </ComposedChart>
         </div>
+
+
+
+        <Form componentClass="fieldset" inline style={{marginTop: 50}}>
+          <FormGroup>
+            <ControlLabel bsStyle="default" style={{marginRight: 10}}>Bonus Driver's Location</ControlLabel>
+
+         
+              <FormControl
+                style={{width: 130}}
+                type="text"
+                value={this.state.bonus_driver_x_new}
+                placeholder="Enter x"
+                onChange={(newVal) => this._onBonusDriverCoordinatesChanged(newVal, "x")}
+              />
+
+              <FormControl
+                type="text"
+                value={this.state.bonus_driver_y_new}
+                placeholder="Enter y"
+                style={{width: 130}}
+                onChange={(newVal) => this._onBonusDriverCoordinatesChanged(newVal, "y")}
+              />
+          </FormGroup>
+
+          <Button style={{marginLeft: 10}} onClick={() => this._onPutBonusDriverButtonPressed()}>
+            Put location
+          </Button>
+
+          <Button style={{marginLeft: 10}} onClick={() => this._onGetBonusDriverButtonPressed()}>
+            Get location {this.state.bonus_driver_location == null ? <Glyphicon glyph="glyphicon glyphicon-save" /> : <Glyphicon glyph="glyphicon glyphicon-saved" />}
+          </Button>
+        </Form>
 
       </div>
     );

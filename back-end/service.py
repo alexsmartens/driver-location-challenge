@@ -19,6 +19,10 @@ f = open(".\data\driver_location.json")
 driver_location = json.load(f)
 f.close()
 
+f = open(".\data\\bonus_driver_location.json")
+bonus_driver_location = json.load(f)
+f.close()
+
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -67,6 +71,27 @@ def put_driver_location():
     return jsonify({
         "Driver’s current position": driver_location
     })
+
+
+## BONUS Part 2:  adding a REST API to update the bonus driver’s current position
+# PUT bonus driver’s current position
+@app.route("/bonusdriver", methods=["PUT"])
+def put_bonus_driver_location():
+    provided_driver_location = request.json["Driver’s current position"]
+    globals()["bonus_driver_location"] = provided_driver_location
+
+    return jsonify({
+        "Driver’s current position": bonus_driver_location
+    })
+
+
+## BONUS Part 3: adding a REST API to get the bonus driver’s current position
+# GET bonus driver’s current position
+@app.route("/bonusdriver", methods=["GET"])
+def get_bonus_driver_location():
+    return jsonify({
+                        "Driver’s current position": bonus_driver_location
+                    })
 
 
 
