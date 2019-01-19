@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
 import { Form, ControlLabel, FormGroup, InputGroup, FormControl, Button, DropdownButton, MenuItem, ButtonToolbar, ButtonGroup , Alert, Label, Badge, Glyphicon} from 'react-bootstrap';
 import {LineChart, ComposedChart, ScatterChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LabelList} from 'recharts';
@@ -12,18 +11,20 @@ class App extends Component {
     super();
     
     this.state = {
-      dropdownOpen: false,
       driver_location: null,
       driver_path: [],
       legs: null,
       legs_dict: {},
       stops: null,
+      stops_dict: {},
 
       bonus_driver_location: null,
       bonus_driver_x_new: '',
       bonus_driver_y_new: '',
       path_to_complete: null,
 
+      bonus2_time_complete_all_legs: null,
+      bonus2_time_complete: null,
 
       alert_info: {status: false,
                    type: "warning",
@@ -50,6 +51,7 @@ class App extends Component {
     this._onPutBonusDriverButtonPressed = this._onPutBonusDriverButtonPressed.bind(this)
     this._onGetBonusDriverButtonPressed = this._onGetBonusDriverButtonPressed.bind(this)
     this.computeBonusRemainingPath = this.computeBonusRemainingPath.bind(this)
+    this.computePathToComplete = this.computePathToComplete.bind(this)
   }
 
 
@@ -118,10 +120,53 @@ class App extends Component {
           dict_specs[key] = list_of_dicts[i][key]
         }
       }
-      dict_specs["isMenuItemActive"] = false
+      dict_specs["index"] = i
       new_dict[list_of_dicts[i][id]] = dict_specs
     }
     return new_dict
+  }
+
+
+  computePathToComplete(){
+    if (Object.keys(this.state.legs_dict).length !== 0  &&Object.keys(this.state.stops_dict).length !== 0 && this.state.driver_location !== null) {
+
+      var new_dict = {}
+      var time_complete_all_legs = 0
+      var is_passed_driver_leg = false
+      var time_complete = 0
+
+      // Append legs dictionary with start and stop locations and compute time required to drive from start to stop
+      // Compute times to complte driver's path and all legs
+      for (var key in this.state.legs_dict) {
+        var dict_specs = this.state.legs_dict[key]
+        dict_specs["startStop_x"] = this.state.stops_dict[dict_specs["startStop"]]["x"]
+        dict_specs["startStop_y"] = this.state.stops_dict[dict_specs["startStop"]]["y"]
+
+        dict_specs["endStop_x"] = this.state.stops_dict[dict_specs["endStop"]]["x"]
+        dict_specs["endStop_y"] = this.state.stops_dict[dict_specs["endStop"]]["y"]
+
+        var dist = Math.sqrt(Math.pow(dict_specs["endStop_x"] - dict_specs["startStop_x"], 2) + 
+                            Math.pow(dict_specs["endStop_y"] - dict_specs["startStop_y"], 2))
+        dict_specs["time"] = dist / dict_specs["speedLimit"]
+
+        new_dict[key] = dict_specs
+
+        time_complete_all_legs += new_dict[key]["time"]
+        if (is_passed_driver_leg) time_complete += new_dict[key]["time"]
+        if (key === this.state.driver_location["activeLegID"]) is_passed_driver_leg = true
+      }
+
+      time_complete += new_dict[this.state.driver_location["activeLegID"]]["time"] * (100 - parseInt(this.state.driver_location["legProgress"])) / 100
+      
+      this.setState({legs_dict: new_dict})
+      this.setState({bonus2_time_complete_all_legs: time_complete_all_legs})
+      this.setState({bonus2_time_complete: time_complete})
+    } else {
+      this.setState({alert_info: {status: true,
+        type: "warning",
+        reason: "computePath",
+        message: "Legs, stops and driver location are reqired for this feature to work"}})
+    }
   }
 
 
@@ -161,6 +206,9 @@ class App extends Component {
 
       var legs_dict = this.convert_list_to_dict(this.state.legs, "legID")
       this.setState({legs_dict: legs_dict})
+
+      // Bonus 2: compute path time to complete
+      if (Object.keys(this.state.stops_dict).length !== 0 && this.state.driver_location !== null) this.computePathToComplete()
     }) 
     .catch(error => {
       this.setState({alert_info: {status: true,
@@ -180,10 +228,16 @@ class App extends Component {
     .then(data => {
       this.setState({stops: data["stops"]})
 
+      var stops_dict = this.convert_list_to_dict(this.state.stops, "name")
+      this.setState({stops_dict: stops_dict})
+
       // Update driver's location
       if (this.state.driver_location !== null) this.computePath()
       // Update bonus driver's remaining path
       if (this.state.bonus_driver_location !== null) this.computeBonusRemainingPath()
+
+      // Bonus 2: compute path time to complete
+      if (Object.keys(this.state.legs_dict).length !== 0 && this.state.driver_location !== null) this.computePathToComplete()
     }) 
     .catch(error => {
       this.setState({alert_info: {status: true,
@@ -205,6 +259,9 @@ class App extends Component {
 
       // Update driver's location
       if (this.state.stops !== null) this.computePath()
+
+      // Bonus 2: compute path time to complete
+      if (Object.keys(this.state.stops_dict).length !== 0 && Object.keys(this.state.legs_dict).length !== 0) this.computePathToComplete()
     }) 
     .catch(error => {
       this.setState({alert_info: {status: true,
@@ -247,6 +304,9 @@ class App extends Component {
 
       // Update driver's location
       if (this.state.driver_location !== null && this.state.stops !== null) this.computePath()
+
+      // Bonus 2: compute path time to complete
+      if (Object.keys(this.state.stops_dict).length !== 0 && Object.keys(this.state.legs_dict).length !== 0) this.computePathToComplete()
       }) 
       .catch(error => {
         this.setState({alert_info: {status: true,
@@ -465,7 +525,7 @@ class App extends Component {
       "y": y,
     })
 
-    for (var i = min_i; i < this.state.stops.length; i++ ){
+    for (i = min_i; i < this.state.stops.length; i++ ){
       path_to_complete.push({
         "name": this.state.stops[i]["name"],
         "x": this.state.stops[i]["x"],
@@ -559,7 +619,7 @@ class App extends Component {
             <Line name="path" dataKey="y" data={this.state.driver_path} fillOpacity={0.7} dot={false}/>
             <Scatter name='driver' data={this.state.driver_path.length === 0 ? null : [this.state.driver_path[this.state.driver_path.length-1]]} fill='#FF4500' shape="star" fillOpacity={0.95}/>
             <Scatter name='bonus driver' data={this.state.bonus_driver_location == null ? null : [this.state.bonus_driver_location]} fill='#FF00FF' shape="diamond" fillOpacity={0.85}/>
-            <Line name="path" dataKey="y" data={this.state.path_to_complete} fillOpacity={0.7} dot={false} strokeDasharray="5 5" stroke="#FF00FF"/>
+            <Line name="bonus path to complete" dataKey="y" data={this.state.path_to_complete} fillOpacity={0.7} dot={false} strokeDasharray="5 5" stroke="#FF00FF"/>
             {/* <Tooltip cursor={{strokeDasharray: '3 3'}} content={(data) => this.renderTooltip(data)}/> */}
             {/* <Tooltip content={({payload}) => (<div>{JSON.stringify(payload[0])}</div>)} /> */}
             <Legend align="center" iconSize={7}/>
@@ -598,6 +658,21 @@ class App extends Component {
             Get location {this.state.bonus_driver_location == null ? <Glyphicon glyph="glyphicon glyphicon-save" /> : <Glyphicon glyph="glyphicon glyphicon-saved" />}
           </Button>
         </Form>
+
+
+        <ControlLabel bsStyle="default" style={{marginTop: 50}}>Bonus 2</ControlLabel>
+        <div style={{display: 'flex',  justifyContent:'center', alignItems:'center'}}>
+
+          <ControlLabel bsStyle="default" style={{marginRight: 10}}>Time to complete the entire path: </ControlLabel>
+          <h4><Label>{this.state.bonus2_time_complete_all_legs == null ? "*" : (this.state.bonus2_time_complete_all_legs).toFixed(2)}</Label></h4>
+        </div>
+        <div style={{display: 'flex',  justifyContent:'center', alignItems:'center'}}>
+          <ControlLabel bsStyle="default" style={{marginRight: 35}}>Time left to complete the trip:</ControlLabel>
+          <h4><Label>{this.state.bonus2_time_complete == null ? "*" : this.state.bonus2_time_complete.toFixed(2)}</Label></h4>
+        </div>
+        <Button style={{marginLeft: 10}} onClick={() => this.computePathToComplete()}>
+            Compute time
+        </Button>
 
       </div>
     );
