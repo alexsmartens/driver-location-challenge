@@ -636,11 +636,11 @@ class App extends Component {
           }
          
 
-        <h1>Driver Location Challenge</h1>
+        <h3>Driver Location Challenge</h3>
 
 
         {/* Parts 1 & 3: REST GET interface */}
-        <ButtonToolbar style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100px'}}>
+        <ButtonToolbar style={{display: 'flex',  justifyContent:'center', alignItems:'center', marginTop: 20}}>
           <Button  style={{width: 150, margin: 5}}  variant="flat" size="xxl" onClick={() => this._onGetLegsButtonPressed()}>
             Get legs {this.state.legs == null ? <Glyphicon glyph="glyphicon glyphicon-save" /> : <Glyphicon glyph="glyphicon glyphicon-saved" />}
           </Button>
@@ -654,10 +654,10 @@ class App extends Component {
 
 
         {/* Parts 6, 8 & Bonus 3: Driver location update */}
-        <div style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100px'}}>
+        <div style={{display: 'flex',  justifyContent:'center', alignItems:'center', marginTop: 20}}>
           <ControlLabel bsStyle="default" style={{marginRight: 10, marginTop: 10}}>New Driver's Location</ControlLabel>
           <div style={{width: 300, marginRight: 5, marginLeft: 5, marginBottom:1}}>
-            <p style={{height: 11}} >Leg progress</p>
+            <p style={{height: 11, marginLeft: 55}} >Leg progress</p>
             <Slider min={0} 
                     max={100} 
                     defaultValue={this.state.sliderVal} 
@@ -682,11 +682,11 @@ class App extends Component {
 
 
         {/* Part 4 & others: Vizualization of legs, paths, driver current location, driver new location and bonus driver location  */}
-        <div style={{display: 'flex',  justifyContent:'center', alignItems:'center', marginTop: 20}}>
+        <div style={{display: 'flex',  justifyContent:'center', alignItems:'center', marginTop: 20, marginBottom: 0 }}>
           <h4><Label>City Map</Label></h4>
         </div>
         <div style={{display: 'flex',  justifyContent:'center', alignItems:'center'}}>
-          <ComposedChart width={900} height={900} margin={{top: 20, right: 20, bottom: 20, left: 20}}>
+          <ComposedChart width={650} height={650} >
             <CartesianGrid />
             <XAxis dataKey={'x'} type="number" name='x' domain={[0, 200]}/>
             <YAxis dataKey={'y'} type="number" name='y' domain={[0, 200]}/>
@@ -708,7 +708,7 @@ class App extends Component {
 
 
         {/* Bonus 1: Bonus driver location */}
-        <Form componentClass="fieldset" inline style={{marginTop: 50}}>
+        <Form componentClass="fieldset" inline style={{marginTop: 40}}>
           <FormGroup>
             <ControlLabel bsStyle="default" style={{marginRight: 10}}><Label bsStyle="info">Bonus 1</Label> Bonus Driver's Location</ControlLabel>
               <FormControl
@@ -736,7 +736,7 @@ class App extends Component {
 
 
         {/* Bonus 2: Path completion time */}
-        <ControlLabel bsStyle="default" style={{marginTop: 50, marginRight: 45}}><Label bsStyle="info">Bonus 2</Label> Driver's Trip Data</ControlLabel>
+        <ControlLabel bsStyle="default" style={{marginTop: 30, marginRight: 45}}><Label bsStyle="info">Bonus 2</Label> Driver's Trip Data</ControlLabel>
         <div style={{display: 'flex',  justifyContent:'center', alignItems:'center'}}>
           <ControlLabel bsStyle="default" style={{marginRight: 10}}>Time to complete the entire path: </ControlLabel>
           <h4><Label>{this.state.bonus2_time_complete_all_legs == null ? "*" : (this.state.bonus2_time_complete_all_legs).toFixed(2)}</Label></h4>
