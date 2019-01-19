@@ -1,9 +1,14 @@
 import React, { Component } from 'react';
 import './App.css';
-import { Form, ControlLabel, FormGroup, InputGroup, FormControl, Button, DropdownButton, MenuItem, ButtonToolbar, ButtonGroup , Alert, Label, Badge, Glyphicon} from 'react-bootstrap';
-import {LineChart, ComposedChart, ScatterChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LabelList} from 'recharts';
-import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
+import { Form, ControlLabel, FormGroup, FormControl, Button, DropdownButton, MenuItem, ButtonToolbar, Alert, Label, Glyphicon} from 'react-bootstrap';
+import {ComposedChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Legend, LabelList} from 'recharts';
+// import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
+import 'rc-slider/assets/index.css';
+import 'rc-tooltip/assets/bootstrap.css';
+import Slider from 'rc-slider';
+import Tooltip from 'rc-tooltip';
 
+const Handle = Slider.Handle;
 
 
 class App extends Component {
@@ -18,28 +23,32 @@ class App extends Component {
       stops: null,
       stops_dict: {},
 
+      // Bonus 1: Bonus driver info
       bonus_driver_location: null,
       bonus_driver_x_new: '',
       bonus_driver_y_new: '',
       path_to_complete: null,
 
+      // Bonus 2: Driver path info
       bonus2_time_complete_all_legs: null,
       bonus2_time_complete: null,
+
+      // Bonus 3: New driver's location
+      driver_loc_activeLegID_new: null,
+      sliderVal: null,
+      newDriverLoc: null,
 
       alert_info: {status: false,
                    type: "warning",
                    reason: "",
                    message: ""
-                  },
-
-      // New driver's location
-      driver_loc_legProgress_new: '',
-      driver_loc_activeLegID_new: null,
+                  },       
     };
 
     this.backEndUrl = "http://localhost:8080/"
     this.pointOverlapDict = {}
     this.iCheckFormatLabel = 0
+
     this.renderDropdownButton = this.renderDropdownButton.bind(this)
     this._onPutDriverButtonPressed = this._onPutDriverButtonPressed.bind(this)
     this.resetErrorMessage = this.resetErrorMessage.bind(this)
@@ -52,6 +61,33 @@ class App extends Component {
     this._onGetBonusDriverButtonPressed = this._onGetBonusDriverButtonPressed.bind(this)
     this.computeBonusRemainingPath = this.computeBonusRemainingPath.bind(this)
     this.computePathToComplete = this.computePathToComplete.bind(this)
+    this._onSliderChange = this._onSliderChange.bind(this)
+    this.computeNewDriverLocOnLegChanged = this.computeNewDriverLocOnLegChanged.bind(this)
+  }
+
+
+  computeNewDriverLocOnLegChanged(newLeg){
+    if (this.state.legs_dict[newLeg]["startStop_x"] !== undefined){
+
+      var start_x = this.state.legs_dict[newLeg]["startStop_x"]
+      var start_y = this.state.legs_dict[newLeg]["startStop_y"]
+
+      var end_x = this.state.legs_dict[newLeg]["endStop_x"]
+      var end_y = this.state.legs_dict[newLeg]["endStop_y"]
+
+      var delta_x = end_x - start_x
+      var delta_y = end_y - start_y
+
+      var new_driver_x = start_x + delta_x * this.state.sliderVal / 100
+      var new_driver_y = start_y + delta_y * this.state.sliderVal / 100
+
+      this.setState({newDriverLoc:{
+                                    "x": new_driver_x,
+                                    "y": new_driver_y,
+                                  }
+      })
+
+    }    
   }
 
 
@@ -104,6 +140,7 @@ class App extends Component {
           key={"key_" + title}
           onSelect={(evtKey, evt) => {
             this.setState({driver_loc_activeLegID_new: evt.target.innerText})
+            this.computeNewDriverLocOnLegChanged(evt.target.innerText)
           }}
         >{title}</MenuItem>
     );
@@ -158,9 +195,10 @@ class App extends Component {
 
       time_complete += new_dict[this.state.driver_location["activeLegID"]]["time"] * (100 - parseInt(this.state.driver_location["legProgress"])) / 100
       
-      this.setState({legs_dict: new_dict})
-      this.setState({bonus2_time_complete_all_legs: time_complete_all_legs})
-      this.setState({bonus2_time_complete: time_complete})
+      this.setState({legs_dict: new_dict,
+                     bonus2_time_complete_all_legs: time_complete_all_legs,
+                     bonus2_time_complete: time_complete
+      })
     } else {
       this.setState({alert_info: {status: true,
         type: "warning",
@@ -273,28 +311,14 @@ class App extends Component {
   }
 
 
-  _onNewProgressValueChanged(newVal){    
-    this.resetErrorMessage()
-
-    var txt = newVal.target.value
-    var err_reason = "inputNumLeg"
-    var err_msg = "Leg progress is an integer in [0, 100]"
-
-    var legProgress_new = this.checkNumInput(txt, 0, 100, err_reason, err_msg)
-
-    // Set the proper value to new leg progress
-    this.setState({driver_loc_legProgress_new: legProgress_new})
-  }
-
-
   _onPutDriverButtonPressed(){
     this.resetErrorMessage()
 
-    if (this.state.driver_loc_legProgress_new !== '' && this.state.driver_loc_activeLegID_new !== null){
+    if (this.state.sliderVal !== null && this.state.driver_loc_activeLegID_new !== null){
       var new_driver_location = {"Driver’s current position":
         {
           "activeLegID": this.state.driver_loc_activeLegID_new,
-          "legProgress": this.state.driver_loc_legProgress_new
+          "legProgress": this.state.sliderVal.toString()
         }
       }
       this.putData(this.backEndUrl + "driver", new_driver_location)
@@ -324,13 +348,15 @@ class App extends Component {
   }
 
 
-  _onLegDropdownButtonPressed(){
-    this.resetErrorMessage()
-    if (this.state.legs == null || this.state.legs.length === 0){
-      this.setState({alert_info: {status: true,
-        type: "warning",
-        reason: "newLegID",
-        message: "There is no leg ID data available, get leg IDs from the server first"}})
+  _onLegDropdownButtonPressed(isVisible){
+    if (isVisible){
+      this.resetErrorMessage()
+      if (this.state.legs == null || this.state.legs.length === 0){
+        this.setState({alert_info: {status: true,
+          type: "warning",
+          reason: "newLegID",
+          message: "There is no leg ID data available, get leg IDs from the server first"}})
+      }
     }
   }
 
@@ -395,6 +421,15 @@ class App extends Component {
       "name": "loc",
       "x": x,
       "y": y,
+    })
+
+    this.setState({
+      newDriverLoc : {
+        "x": x,
+        "y": y,
+      },
+      sliderVal: parseInt(this.state.driver_location["legProgress"]),
+      driver_loc_activeLegID_new: this.state.driver_location["activeLegID"]
     })
 
     // Update driver's path
@@ -536,11 +571,51 @@ class App extends Component {
     this.setState({path_to_complete: path_to_complete})
   }
 
+
+  _handleSlider (props){
+    const { value, dragging, index, ...restProps } = props;
+    return (
+      <Tooltip
+        prefixCls="rc-slider-tooltip"
+        overlay={value + "%"}
+        visible={dragging}
+        placement="top"
+        key={index}
+      >
+        <Handle value={value} {...restProps} />
+      </Tooltip>
+    )
+  }
+
   
+  _onSliderChange(val){
+    this.setState({sliderVal: val})
+
+    if (this.state.newDriverLoc !== null){
+      var start_x = this.state.legs_dict[this.state.driver_loc_activeLegID_new]["startStop_x"]
+      var start_y = this.state.legs_dict[this.state.driver_loc_activeLegID_new]["startStop_y"]
+
+      var end_x = this.state.legs_dict[this.state.driver_loc_activeLegID_new]["endStop_x"]
+      var end_y = this.state.legs_dict[this.state.driver_loc_activeLegID_new]["endStop_y"]
+
+      var delta_x = end_x - start_x
+      var delta_y = end_y - start_y
+
+      var new_driver_x = start_x + delta_x * this.state.sliderVal / 100
+      var new_driver_y = start_y + delta_y * this.state.sliderVal / 100
+      
+      this.setState({newDriverLoc:{
+                                    "x": new_driver_x,
+                                    "y": new_driver_y,
+                                  }
+      })
+
+    }
+  }
+
 
   render() {
     return (
-
       <div className="App">
 
           {this.state.alert_info["status"] ?
@@ -553,7 +628,6 @@ class App extends Component {
          
 
         <h1>Driver Location Challenge</h1>
-
 
 
         <ButtonToolbar style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100px'}}>
@@ -571,36 +645,33 @@ class App extends Component {
         </ButtonToolbar>
 
 
+        <div style={{display: 'flex',  justifyContent:'center', alignItems:'center', height: '100px'}}>
+          <ControlLabel bsStyle="default" style={{marginRight: 10, marginTop: 10}}>New Driver's Location</ControlLabel>
+          
+          <div style={{width: 300, marginRight: 5, marginLeft: 5, marginBottom:1}}>
+            <p style={{height: 11}} >Leg progress</p>
+            <Slider min={0} 
+                    max={100} 
+                    defaultValue={this.state.sliderVal} 
+                    value={this.state.sliderVal} 
+                    disabled={this.state.sliderVal == null ? true : false} 
+                    handle={(props) => this._handleSlider(props)}
+                    onChange={(data) => this._onSliderChange(data)} />
+          </div>
 
-        <Form componentClass="fieldset" inline>
-          <FormGroup>
-            <ControlLabel bsStyle="default" style={{marginRight: 10}}>New Driver's Location</ControlLabel>
+          <DropdownButton
+            style={{marginRight: 10, marginLeft: 5, width: 100}} 
+            id="dropdown_new_leg_ID"
+            title={this.state.driver_loc_activeLegID_new == null ? "New leg ID" : this.state.driver_loc_activeLegID_new}
+            onToggle={(isVisible) => this._onLegDropdownButtonPressed(isVisible)}
+          >
+            {Object.keys(this.state.legs_dict).map(this.renderDropdownButton)}
+          </DropdownButton>
 
-            <InputGroup>
-              <FormControl
-                type="text"
-                value={this.state.driver_loc_legProgress_new}
-                placeholder="Enter new progress, %"
-                onChange={(newVal) => this._onNewProgressValueChanged(newVal)}
-              />
-
-              <DropdownButton
-                style={{width: 100}} 
-                componentClass={InputGroup.Button}
-                id="dropdown_new_leg_ID"
-                title={this.state.driver_loc_activeLegID_new == null ? "New leg ID" : this.state.driver_loc_activeLegID_new}
-                onToggle={() => this._onLegDropdownButtonPressed()}
-              >
-                {Object.keys(this.state.legs_dict).map(this.renderDropdownButton)}
-              </DropdownButton>
-            </InputGroup>
-          </FormGroup>
-
-          <Button style={{marginLeft: 10}} onClick={() => this._onPutDriverButtonPressed()}>
+          <Button style={{marginLeft: 5}} onClick={() => this._onPutDriverButtonPressed()}>
             Put location
           </Button>
-        </Form>
-
+        </div>
 
 
         <div style={{display: 'flex',  justifyContent:'center', alignItems:'center', marginTop: 20}}>
@@ -608,31 +679,30 @@ class App extends Component {
         </div>
 
         <div style={{display: 'flex',  justifyContent:'center', alignItems:'center'}}>
-
           <ComposedChart width={900} height={900} margin={{top: 20, right: 20, bottom: 20, left: 20}}>
             <CartesianGrid />
             <XAxis dataKey={'x'} type="number" name='x' domain={[0, 200]}/>
             <YAxis dataKey={'y'} type="number" name='y' domain={[0, 200]}/>
-            <Scatter name='stops' data={this.state.stops} fill='#8884d8' shape="cross" fillOpacity={0.7}>
+            <Scatter name='stops' data={this.state.stops} fill='#8884d8' shape="cross" legendType="cross" fillOpacity={0.7}>
               <LabelList dataKey="name" position="top" content={(labelData) => this.formatFigureLabel(labelData)}/>
             </Scatter>
             <Line name="path" dataKey="y" data={this.state.driver_path} fillOpacity={0.7} dot={false}/>
-            <Scatter name='driver' data={this.state.driver_path.length === 0 ? null : [this.state.driver_path[this.state.driver_path.length-1]]} fill='#FF4500' shape="star" fillOpacity={0.95}/>
-            <Scatter name='bonus driver' data={this.state.bonus_driver_location == null ? null : [this.state.bonus_driver_location]} fill='#FF00FF' shape="diamond" fillOpacity={0.85}/>
+            <Scatter data={this.state.driver_path.length === 0 ? null : [this.state.driver_path[this.state.driver_path.length-1]]} fill='#FF4500' shape="star" fillOpacity={0.40} legendType="none"/>
+            
+            <Scatter name='driver' data={this.state.newDriverLoc == null ? null : [this.state.newDriverLoc]} fill='#FF4500' shape="star" legendType="star" fillOpacity={0.95}/>
+            
+            <Scatter name='bonus driver' data={this.state.bonus_driver_location == null ? null : [this.state.bonus_driver_location]} fill='#FF00FF' shape="diamond" legendType="diamond" fillOpacity={0.85}/>
             <Line name="bonus path to complete" dataKey="y" data={this.state.path_to_complete} fillOpacity={0.7} dot={false} strokeDasharray="5 5" stroke="#FF00FF"/>
             {/* <Tooltip cursor={{strokeDasharray: '3 3'}} content={(data) => this.renderTooltip(data)}/> */}
             {/* <Tooltip content={({payload}) => (<div>{JSON.stringify(payload[0])}</div>)} /> */}
-            <Legend align="center" iconSize={7}/>
+            <Legend align="center" iconSize={10}/>
           </ComposedChart>
         </div>
-
 
 
         <Form componentClass="fieldset" inline style={{marginTop: 50}}>
           <FormGroup>
             <ControlLabel bsStyle="default" style={{marginRight: 10}}>Bonus Driver's Location</ControlLabel>
-
-         
               <FormControl
                 style={{width: 130}}
                 type="text"
@@ -640,7 +710,6 @@ class App extends Component {
                 placeholder="Enter x"
                 onChange={(newVal) => this._onBonusDriverCoordinatesChanged(newVal, "x")}
               />
-
               <FormControl
                 type="text"
                 value={this.state.bonus_driver_y_new}
@@ -661,17 +730,19 @@ class App extends Component {
 
 
         <ControlLabel bsStyle="default" style={{marginTop: 50}}>Bonus 2</ControlLabel>
+        
         <div style={{display: 'flex',  justifyContent:'center', alignItems:'center'}}>
-
           <ControlLabel bsStyle="default" style={{marginRight: 10}}>Time to complete the entire path: </ControlLabel>
           <h4><Label>{this.state.bonus2_time_complete_all_legs == null ? "*" : (this.state.bonus2_time_complete_all_legs).toFixed(2)}</Label></h4>
         </div>
+
         <div style={{display: 'flex',  justifyContent:'center', alignItems:'center'}}>
           <ControlLabel bsStyle="default" style={{marginRight: 35}}>Time left to complete the trip:</ControlLabel>
           <h4><Label>{this.state.bonus2_time_complete == null ? "*" : this.state.bonus2_time_complete.toFixed(2)}</Label></h4>
         </div>
+        
         <Button style={{marginLeft: 10}} onClick={() => this.computePathToComplete()}>
-            Compute time
+            Compute time {this.state.bonus2_time_complete_all_legs == null ? <Glyphicon glyph="glyphicon glyphicon-save" /> : <Glyphicon glyph="glyphicon glyphicon-saved" />}
         </Button>
 
       </div>
