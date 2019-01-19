@@ -182,12 +182,11 @@ def plot_legs(ax, driver_location, stops_dict):
 
 
 # Driver's data visualization
-def plot_track_data(stops, driver_location, stops_dict, is_plot_stops=True, is_plot_driver=True, is_plot_legs=True):
-    print("plot_track_data")
+def plot_truck_data(stops, driver_location, stops_dict, is_plot_stops=True, is_plot_driver=True, is_plot_legs=True):
     # Plot initialization
     fig, ax = plt.subplots()
     # ax.scatter(loc_x, loc_y, s=15, alpha=0.7, marker='x', color="c")
-    ax.set_title("Track stops")
+    ax.set_title("Truck stops")
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_xlim([0, 200])

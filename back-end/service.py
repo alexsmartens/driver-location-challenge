@@ -2,8 +2,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import json
 from plot_driver_location import *
-# Plot and save track path on the server
-is_plot_server = False
+# Plot and save truck path on the server
+# Plot and save truck path on the server
+is_plot_server = True
 
 
 ## Part 0: loading legs, stops and driver location data
@@ -66,7 +67,7 @@ def put_driver_location():
         if "stops_dict" not in globals():
             globals()["legs_dict"] = convert_list_to_dict(legs, "legID")
             globals()["stops_dict"] = convert_list_to_dict(stops, "name")
-        plot_track_data(stops, driver_location, globals()["stops_dict"])
+        plot_truck_data(stops, driver_location, globals()["stops_dict"])
 
     return jsonify({
         "Driver’s current position": driver_location
@@ -104,6 +105,6 @@ if __name__=="__main__":
         if "stops_dict" not in globals():
             legs_dict = convert_list_to_dict(legs, "legID")
             stops_dict = convert_list_to_dict(stops, "name")
-        plot_track_data(stops, driver_location, stops_dict)
+        plot_truck_data(stops, driver_location, stops_dict)
 
     app.run(debug=True, port=8080)
