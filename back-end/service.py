@@ -4,7 +4,7 @@ import json
 from plot_driver_location import *
 # Plot and save truck path on the server
 # Plot and save truck path on the server
-is_plot_server = True
+is_plot_server = False
 
 
 ## Part 0: loading legs, stops and driver location data
