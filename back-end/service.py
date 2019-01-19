@@ -73,7 +73,7 @@ def put_driver_location():
     })
 
 
-## BONUS Part 2:  adding a REST API to update the bonus driver’s current position
+## BONUS 1 (Part 2): adding a REST API to update the bonus driver’s current position
 # PUT bonus driver’s current position
 @app.route("/bonusdriver", methods=["PUT"])
 def put_bonus_driver_location():
@@ -85,7 +85,7 @@ def put_bonus_driver_location():
     })
 
 
-## BONUS Part 3: adding a REST API to get the bonus driver’s current position
+## BONUS 1 (Part 3): adding a REST API to get the bonus driver’s current position
 # GET bonus driver’s current position
 @app.route("/bonusdriver", methods=["GET"])
 def get_bonus_driver_location():
