@@ -1,5 +1,8 @@
 # Driver Location Challenge
 
+## Screenshot
+![alt text](https://github.com/alexsmartens/driver-location-challenge/blob/master/interface_screenshot.png)
+
 ## About
 This project is a submission for the Driver Location Challenge. The project provides a convenient 
 way to visualize, store and update track stops and the driver location.
@@ -59,6 +62,3 @@ soon as the stops and driver current location data is received.
 
 8.The visualizations in #4 and #5 are refreshed to reflect the updates to the driver’s current position 
 when the PUT response is received
-
-User interface screenshot reference:
-![alt text](https://github.com/alexsmartens/driver-location-challenge/blob/master/interface_screenshot.png)
