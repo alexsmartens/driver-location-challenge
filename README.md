@@ -5,7 +5,7 @@
 
 ## About
 This project is a submission for the Driver Location Challenge. The project provides a convenient 
-way to visualize, store and update track stops and the driver location.
+way to visualize, store and update truck stops and the driver location.
 
 The front end is implemented with [React](https://reactjs.org/) and the back end is implemented with 
 Python and [Flask](http://flask.pocoo.org/). The front end is initialized with [create-react-app](
