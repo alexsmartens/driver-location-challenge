@@ -22,7 +22,7 @@ git clone https://github.com/alexsmartens/driver-location-challenge.git
 cd .\driver-location-challenge\
 npm --prefix ./front-end install
 ```
-### Running
+### Running on a local machine
 from `driver-location-challenge` folder run:
 
 * for lunching the front end
@@ -34,6 +34,8 @@ npm --prefix ./front-end start
 cd .\back-end\
 python .\service.py
 ```
+
+By default, the back end runs on `http://localhost:8080/`. This can be changed here on the [back end side](https://github.com/alexsmartens/driver-location-challenge/blob/0256a85d2d98a99ed6af3782ea59794942e06298/back-end/service.py#L110) and on the [front end side](https://github.com/alexsmartens/driver-location-challenge/blob/7c239f7600d3c21fff7f6c1b87c98760003dcbdd/front-end/src/App.js#L45)
 
 ### User instruction (following the challenge problem statement)
 1.Retrieve the given list of stops and legs from server:
@@ -57,3 +59,6 @@ soon as the stops and driver current location data is received.
 
 8.The visualizations in #4 and #5 are refreshed to reflect the updates to the driver’s current position 
 when the PUT response is received
+
+User interface screenshot reference:
+![alt text](https://github.com/alexsmartens/driver-location-challenge/blob/master/interface_screenshot.png)
