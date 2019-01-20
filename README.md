@@ -15,7 +15,7 @@ https://github.com/facebook/create-react-app#readme) and includes the following 
 * [rc-slider](https://github.com/react-component/slider) and [rc-tooltip](
 https://github.com/react-component/tooltip) for a slider
  
-The project has been designed and tested on a computer with Windows 10 x64, npm 6.4.1, python 3.7.2.
+The project has been designed and tested on a computer with Windows 10 x64, npm 6.4.1, python 3.7.2
  
 ## Usage
 
@@ -52,7 +52,7 @@ By default, the back end runs on `http://localhost:8080/`. This can be changed h
 4.The position of the driver is visualized automatically as soon as it is received from the server
 
 5.The completed section of the leg where the driver is and completed legs are visualized automatically as
-soon as the stops and driver current location data is received.
+soon as the stops and driver current location data is received
 
 6.The form to change the driver’s current position:
 * percentage progress is specified with a slider in `New Driver's Location` section
